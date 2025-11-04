@@ -1,142 +1,243 @@
-import React, { useMemo, useState } from 'react';
-import Header from './components/Header';
-import PlannerForm from './components/PlannerForm';
-import AnalysisSummary from './components/AnalysisSummary';
-import DetailedPlan from './components/DetailedPlan';
+import { useEffect, useMemo, useState } from 'react';
+import HeaderHero from './components/Header.jsx';
+import PlannerForm from './components/PlannerForm.jsx';
+import AnalysisSummary from './components/AnalysisSummary.jsx';
+import DetailedPlan from './components/DetailedPlan.jsx';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
-function analyze({ species, location, capital, risk }) {
-  // Simple heuristic to simulate AI-driven feasibility
-  const base = {
-    Catfish: 65,
-    Tilapia: 70,
-    Gourami: 60,
-  }[species] || 60;
+// Simple route manager without react-router using History API
+const useSimpleRouter = (initialPath = '/') => {
+  const [path, setPath] = useState(() => window.location.pathname || initialPath);
 
-  const locationBoostMap = {
-    Padang: 8,
-    Bukittinggi: 5,
-    Payakumbuh: 6,
-    Pariaman: 7,
-    Solok: 4,
-    'Pesisir Selatan': 9,
-    Agam: 5,
-    'Tanah Datar': 6,
-    Pasaman: 4,
-    'Lima Puluh Kota': 6,
+  useEffect(() => {
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const navigate = (to) => {
+    if (to !== path) {
+      window.history.pushState({}, '', to);
+      setPath(to);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
-  const locationBoost = locationBoostMap[location] ?? 5;
 
-  const capitalBoost = Math.min(15, Math.max(0, Math.floor((capital - 3000) / 1000)));
-  const riskAdj = risk === 'Aggressive' ? 8 : risk === 'Moderate' ? 3 : -4;
-  const viabilityScore = Math.max(20, Math.min(95, Math.round(base + locationBoost + capitalBoost + riskAdj)));
-
-  const regionalPotential =
-    location === 'Pesisir Selatan'
-      ? 'Strong export channels via coastal logistics'
-      : location === 'Padang'
-        ? 'High local demand and accessible distribution hubs'
-        : 'Stable buyer network and input availability';
-
-  const roiBase = species === 'Tilapia' ? 10 : species === 'Catfish' ? 9 : 12;
-  const roiRisk = risk === 'Conservative' ? +2 : risk === 'Aggressive' ? -2 : 0;
-  const roiCapital = capital > 8000 ? -2 : capital < 3000 ? +2 : 0;
-  const roiMonths = Math.max(6, roiBase + roiRisk + roiCapital);
-
-  const notes = viabilityScore >= 75
-    ? 'High feasibility with robust operational outlook.'
-    : viabilityScore >= 55
-      ? 'Feasible with targeted optimizations.'
-      : 'Proceed cautiously; consider boosting capital or adjusting risk.';
-
-  return { viabilityScore, regionalPotential, roiMonths, notes };
-}
-
-function buildPlan(inputs, summary) {
-  const { species, location, capital, risk } = inputs;
-
-  const suppliers = [
-    { name: `${species} Fingerlings Co.`, type: 'Hatchery', city: location, contact: '+62 821-XXXX-1111' },
-    { name: 'Sumbar AquaFeed', type: 'Feed supplier', city: location, contact: '+62 822-XXXX-2222' },
-    { name: 'Nusantara Water Tech', type: 'Equipment', city: 'Padang', contact: '+62 823-XXXX-3333' },
-    { name: 'Vet Ikan Andalas', type: 'Veterinary & Lab', city: 'Bukittinggi', contact: '+62 824-XXXX-4444' },
-  ];
-
-  const startup = Math.min(capital, 4000 + (risk === 'Aggressive' ? 1000 : risk === 'Conservative' ? -500 : 0));
-  const opex = 800 + (species === 'Gourami' ? 120 : 0);
-  const revenue = 1600 + (summary.viabilityScore - 60) * 8;
-
-  const phases = [
-    { title: 'Site selection & permits', detail: 'Confirm land/pond availability, secure local permits, and assess water source quality (pH 6.5–8.5, ammonia <0.02 mg/L).' },
-    { title: 'Infrastructure setup', detail: 'Construct/rehabilitate ponds (300–500 m² each), install aeration and simple filtration; prepare storage and biosecurity perimeter.' },
-    { title: 'Sourcing & stocking', detail: `Procure ${species.toLowerCase()} fingerlings from certified hatcheries; stock at recommended density and acclimate to site conditions.` },
-    { title: 'Operations & SOPs', detail: 'Establish feeding regimen, water testing cadence, and health monitoring; track FCR and daily mortality.' },
-    { title: 'Go-to-market', detail: 'Secure purchase agreements with local buyers, restaurants, and markets; plan harvest schedule and cold-chain logistics.' },
-  ];
-
-  const risks = [
-    'Price volatility: lock in forward contracts with regional buyers when possible.',
-    'Biosecurity: quarantine new stock, sanitize equipment, control pond access.',
-    'Water quality swings: implement weekly testing and backup aeration.',
-    'Extreme weather: maintain drainage and emergency feed reserves (2 weeks).',
-  ];
-
-  return {
-    location,
-    roiMonths: summary.roiMonths,
-    suppliers,
-    phases,
-    financials: { startup, opex, revenue },
-    risks,
-  };
-}
+  return { path, navigate };
+};
 
 export default function App() {
-  const [inputs, setInputs] = useState(null);
-  const [summary, setSummary] = useState(null);
+  const { path, navigate } = useSimpleRouter('/');
+
+  // Global state shared across steps
+  const [inputs, setInputs] = useState({
+    species: 'Tilapia',
+    location: 'Padang',
+    capital: 20000,
+    risk: 'Balanced',
+  });
+  const [analysis, setAnalysis] = useState(null);
   const [plan, setPlan] = useState(null);
 
-  const handleAnalyze = (data) => {
-    const s = analyze(data);
-    setInputs(data);
-    setSummary(s);
+  // Derived step index for progress UI
+  const stepIndex = useMemo(() => {
+    switch (path) {
+      case '/':
+        return 0;
+      case '/inputs':
+        return 1;
+      case '/analyze':
+        return 2;
+      case '/plan':
+        return 3;
+      default:
+        return 0;
+    }
+  }, [path]);
+
+  // Heuristic "AI" analysis
+  const analyze = (vals) => {
+    const speciesBase = {
+      Tilapia: 75,
+      Catfish: 68,
+      Shrimp: 82,
+      Milkfish: 70,
+      Pangasius: 73,
+    };
+    const locBoost = {
+      Padang: 8,
+      Bukittinggi: 5,
+      Pariaman: 7,
+      Payakumbuh: 6,
+      Painan: 9,
+      Solok: 7,
+      Sawahlunto: 4,
+      Dharmasraya: 5,
+      Agam: 6,
+      TanahDatar: 6,
+    };
+    const riskAdj = { Conservative: -6, Balanced: 0, Aggressive: 4 };
+
+    const base = speciesBase[vals.species] ?? 65;
+    const loc = locBoost[vals.location] ?? 5;
+    const cap = Math.min(20, Math.floor((Number(vals.capital) || 0) / 5000) * 3);
+    const risk = riskAdj[vals.risk] ?? 0;
+
+    const score = Math.max(0, Math.min(100, base + loc + cap + risk));
+    const roiMonths = Math.max(6, 18 - Math.floor(score / 8));
+
+    return {
+      score,
+      roiMonths,
+      regionPotential: score > 80 ? 'Excellent' : score > 65 ? 'Good' : 'Moderate',
+      notes: [
+        `Species fit: ${base}/100`,
+        `Regional conditions boost: +${loc}`,
+        `Capital readiness boost: +${cap}`,
+        `Risk adjustment: ${risk >= 0 ? '+' : ''}${risk}`,
+      ],
+    };
+  };
+
+  // Heuristic planner
+  const buildPlan = (vals, result) => {
+    const phases = [
+      {
+        title: 'Month 0-1: Setup & Permits',
+        items: [
+          'Finalize pond/site selection and obtain local permits',
+          'Secure broodstock or certified seeds',
+          'Arrange water testing and baseline quality parameters',
+        ],
+      },
+      {
+        title: 'Month 2-3: Stocking & Conditioning',
+        items: [
+          'Acclimate fry to pond conditions and stock at optimal density',
+          'Implement daily feeding & health monitoring routines',
+          'Install aeration and backup power solutions',
+        ],
+      },
+      {
+        title: 'Month 4-6: Growth & Optimization',
+        items: [
+          'Fine-tune feed conversion ratio (FCR) using weekly sampling',
+          'Adopt partial harvest strategy based on market demand',
+          'Lock in buyer contracts for predictable cash flow',
+        ],
+      },
+    ];
+
+    const suppliers = [
+      { name: 'Sumbar Aqua Supply', specialty: 'Seeds & Broodstock', location: 'Padang' },
+      { name: 'Minang Feeds Co.', specialty: 'High-protein feed', location: 'Pariaman' },
+      { name: 'Andalas Water Lab', specialty: 'Water testing & consultancy', location: 'Bukittinggi' },
+    ];
+
+    const capital = Number(vals.capital) || 0;
+    const seed = Math.round(capital * 0.25);
+    const infrastructure = Math.round(capital * 0.35);
+    const feed = Math.round(capital * 0.30);
+    const reserve = Math.round(capital - seed - infrastructure - feed);
+
+    const monthlyRevenue = Math.round((result.score / 100) * (capital * 0.28));
+    const monthlyCost = Math.round(capital * 0.08);
+
+    return {
+      phases,
+      suppliers,
+      finance: {
+        seed,
+        infrastructure,
+        feed,
+        reserve,
+        monthlyRevenue,
+        monthlyCost,
+        monthlyProfit: monthlyRevenue - monthlyCost,
+        roiMonths: result.roiMonths,
+      },
+      riskMitigation: [
+        'Maintain biosecurity protocol and quarantine new stock',
+        'Diversify feed sources to manage price volatility',
+        'Keep emergency aeration and generator tested monthly',
+        'Insure stock against disease/weather where feasible',
+      ],
+    };
+  };
+
+  const handleSubmitInputs = (vals) => {
+    setInputs(vals);
+    const res = analyze(vals);
+    setAnalysis(res);
     setPlan(null);
+    navigate('/analyze');
   };
 
   const handleApprove = () => {
-    if (!inputs || !summary) return;
-    const p = buildPlan(inputs, summary);
+    const p = buildPlan(inputs, analysis);
     setPlan(p);
+    navigate('/plan');
   };
 
-  const handleReset = () => {
-    setInputs(null);
-    setSummary(null);
+  const handleRestart = () => {
     setPlan(null);
+    setAnalysis(null);
+    navigate('/inputs');
   };
+
+  useEffect(() => {
+    // Initialize route to a friendly entry
+    if (path === '/') navigate('/inputs');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-sky-50">
-      <Header />
+    <div className="min-h-screen w-full bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
+      <HeaderHero step={stepIndex} onBack={() => window.history.back()} />
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
-        <div className="text-center mb-2">
-          <h2 className="text-2xl md:text-3xl font-semibold text-gray-800">Plan your fish farming venture</h2>
-          <p className="text-gray-600 mt-2 max-w-2xl mx-auto">Get a feasibility score, understand regional potential, and unlock a detailed, step-by-step plan tailored to West Sumatra.</p>
+      <main className="mx-auto max-w-6xl px-4 pb-24">
+        {/* Step navigation buttons (mobile-friendly) */}
+        <div className="sticky top-0 z-20 -mx-4 mb-6 bg-gradient-to-b from-slate-950/80 to-slate-900/30 backdrop-blur supports-[backdrop-filter]:bg-white/5">
+          <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+            <button
+              onClick={() => window.history.back()}
+              className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/10"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back
+            </button>
+            <div className="text-xs text-slate-300">Step {stepIndex + 1} of 4</div>
+          </div>
         </div>
 
-        <PlannerForm onAnalyze={handleAnalyze} />
+        {path === '/inputs' && (
+          <div className="animate-in slide-in-from-bottom-4 duration-300">
+            <PlannerForm defaultValues={inputs} onSubmit={handleSubmitInputs} />
+          </div>
+        )}
 
-        <AnalysisSummary summary={summary} onApprove={handleApprove} onReset={handleReset} />
+        {path === '/analyze' && analysis && (
+          <div className="animate-in fade-in duration-300">
+            <AnalysisSummary data={analysis} onApprove={handleApprove} onReset={handleRestart} onBack={() => navigate('/inputs')} />
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={handleApprove}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 font-medium text-emerald-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400"
+              >
+                Continue to Plan <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
-        {plan && <DetailedPlan plan={plan} />}
-
-        {!summary && (
-          <div className="text-center text-sm text-gray-500">Fill the form to generate your initial report.</div>
+        {path === '/plan' && plan && (
+          <div className="animate-in fade-in duration-300">
+            <DetailedPlan plan={plan} onRestart={handleRestart} />
+          </div>
         )}
       </main>
 
-      <footer className="py-8 text-center text-xs text-gray-500">
-        © {new Date().getFullYear()} AquacultureAI Sumbar. Guidance only — validate locally before investing.
+      <footer className="border-t border-white/5 bg-slate-950/60 py-8 text-center text-sm text-slate-400">
+        © {new Date().getFullYear()} AquacultureAI Sumbar — Guided planning for thriving farms
       </footer>
     </div>
   );

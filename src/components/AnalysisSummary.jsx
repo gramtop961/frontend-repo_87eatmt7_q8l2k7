@@ -1,56 +1,84 @@
-import React from 'react';
-import { ThumbsUp } from 'lucide-react';
+import { CheckCircle2, TrendingUp, Info, ArrowLeft, ArrowRight } from 'lucide-react';
 
-export default function AnalysisSummary({ summary, onApprove, onReset }) {
-  if (!summary) return null;
-
-  const scoreColor = summary.viabilityScore >= 75
-    ? 'bg-emerald-600'
-    : summary.viabilityScore >= 50
-      ? 'bg-amber-500'
-      : 'bg-rose-600';
+export default function AnalysisSummary({ data, onApprove, onReset, onBack }) {
+  const pct = Math.min(100, Math.max(0, data.score));
 
   return (
-    <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-800">Feasibility snapshot</h3>
-          <p className="text-sm text-gray-600 mt-1">AI-generated summary based on your inputs</p>
-        </div>
-        <button onClick={onReset} className="text-sm text-emerald-700 hover:text-emerald-800">Start over</button>
-      </div>
-
-      <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div>
-          <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-            <span>Viability score</span>
-            <span className="font-medium text-gray-800">{summary.viabilityScore}%</span>
+    <section className="mx-auto max-w-4xl">
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-white/0 p-6 shadow-xl shadow-black/20">
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-white">Feasibility summary</h2>
+            <p className="mt-1 text-sm text-slate-300">AI-style analysis of your inputs with a projected ROI timeline.</p>
           </div>
-          <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
-            <div className={`h-full ${scoreColor}`} style={{ width: `${summary.viabilityScore}%` }} />
+          <button onClick={onBack} className="inline-flex items-center gap-2 rounded-lg bg-white/5 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/10">
+            <ArrowLeft className="h-4 w-4" /> Adjust inputs
+          </button>
+        </div>
+
+        {/* Score bar */}
+        <div className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-300">Viability score</span>
+            <span className="font-medium text-white">{pct}/100</span>
           </div>
-          <p className="text-xs text-gray-500 mt-2">{summary.notes}</p>
+          <div className="mt-2 h-2 w-full rounded-full bg-white/10">
+            <div
+              className="h-2 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <div className="mt-2 text-xs text-slate-400">Regional potential: {data.regionPotential}</div>
         </div>
 
-        <div>
-          <p className="text-sm text-gray-600 mb-1">Regional potential</p>
-          <p className="text-base font-medium text-gray-800">{summary.regionalPotential}</p>
+        {/* Details */}
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
+            <div className="flex items-center gap-2 text-slate-200">
+              <TrendingUp className="h-4 w-4 text-emerald-400" /> Projected ROI
+            </div>
+            <p className="mt-2 text-2xl font-semibold text-white">{data.roiMonths} months</p>
+            <p className="mt-1 text-xs text-slate-400">Expected to reach break-even with current assumptions.</p>
+          </div>
+
+          <div className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
+            <div className="flex items-center gap-2 text-slate-200">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Strengths
+            </div>
+            <ul className="mt-2 space-y-1 text-sm text-slate-300">
+              {data.notes.map((n, i) => (
+                <li key={i}>• {n}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
+            <div className="flex items-center gap-2 text-slate-200">
+              <Info className="h-4 w-4 text-emerald-400" /> Next steps
+            </div>
+            <ul className="mt-2 space-y-1 text-sm text-slate-300">
+              <li>Validate supplier availability</li>
+              <li>Confirm target stocking density</li>
+              <li>Align buyer contracts</li>
+            </ul>
+          </div>
         </div>
 
-        <div>
-          <p className="text-sm text-gray-600 mb-1">Projected ROI timeline</p>
-          <p className="text-base font-medium text-gray-800">{summary.roiMonths} months</p>
-        </div>
-      </div>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <button
+            onClick={onReset}
+            className="inline-flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/10"
+          >
+            Start over
+          </button>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          onClick={onApprove}
-          className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg transition"
-        >
-          <ThumbsUp className="h-4 w-4" /> Approve & Generate Detailed Plan
-        </button>
-        <span className="text-xs text-gray-500">You can refine inputs later</span>
+          <button
+            onClick={onApprove}
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 font-medium text-emerald-950 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400"
+          >
+            Approve & Generate Plan <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </section>
   );

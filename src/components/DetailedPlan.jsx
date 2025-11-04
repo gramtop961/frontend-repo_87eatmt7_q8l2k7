@@ -1,63 +1,88 @@
-import React from 'react';
-import { ClipboardList, Factory, AlertTriangle, DollarSign, MapPin } from 'lucide-react';
+import { CalendarClock, Building2, DollarSign, ShieldCheck, Factory, Truck, RefreshCw } from 'lucide-react';
 
-export default function DetailedPlan({ plan }) {
-  if (!plan) return null;
-
-  const currency = (v) => v.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+export default function DetailedPlan({ plan, onRestart }) {
+  const currency = (n) => new Intl.NumberFormat('id-ID').format(n);
 
   return (
-    <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Your actionable business plan</h3>
-        <div className="text-xs text-gray-500">Location: <span className="font-medium text-gray-700">{plan.location}</span></div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-lg border border-emerald-100 p-4">
-            <div className="flex items-center gap-2 text-emerald-700 font-medium mb-3"><ClipboardList className="h-4 w-4"/> Phase-by-phase roadmap</div>
-            <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-              {plan.phases.map((p, i) => (
-                <li key={i}>
-                  <span className="font-medium text-gray-800">{p.title}:</span> {p.detail}
-                </li>
-              ))}
-            </ol>
+    <section className="mx-auto max-w-5xl">
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-white/0 p-6 shadow-xl shadow-black/20">
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-white">Detailed execution plan</h2>
+            <p className="mt-1 text-sm text-slate-300">Phased roadmap, local suppliers, and financial breakdown.</p>
           </div>
+          <button onClick={onRestart} className="inline-flex items-center gap-2 rounded-lg bg-white/5 px-3 py-1.5 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/10">
+            <RefreshCw className="h-4 w-4" /> Start again
+          </button>
+        </div>
 
-          <div className="rounded-lg border border-emerald-100 p-4">
-            <div className="flex items-center gap-2 text-emerald-700 font-medium mb-3"><Factory className="h-4 w-4"/> Local suppliers</div>
-            <ul className="space-y-2 text-sm text-gray-700">
-              {plan.suppliers.map((s, i) => (
-                <li key={i} className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-medium text-gray-800">{s.name}</p>
-                    <p className="text-xs text-gray-500">{s.type} • {s.contact}</p>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-500"><MapPin className="h-3 w-3"/> {s.city}</div>
-                </li>
-              ))}
-            </ul>
+        {/* Phases */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {plan.phases.map((p, i) => (
+            <div key={i} className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
+              <div className="flex items-center gap-2 text-slate-200">
+                <CalendarClock className="h-4 w-4 text-emerald-400" /> {p.title}
+              </div>
+              <ul className="mt-2 space-y-1 text-sm text-slate-300">
+                {p.items.map((it, idx) => (
+                  <li key={idx}>• {it}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Suppliers */}
+        <div className="mt-6 rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
+          <div className="flex items-center gap-2 text-slate-200">
+            <Factory className="h-4 w-4 text-emerald-400" /> Local suppliers
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+            {plan.suppliers.map((s, i) => (
+              <div key={i} className="rounded-lg bg-white/5 p-3 ring-1 ring-white/10">
+                <div className="font-medium text-white">{s.name}</div>
+                <div className="text-xs text-slate-300">{s.specialty}</div>
+                <div className="mt-1 inline-flex items-center gap-1 text-xs text-slate-400">
+                  <Truck className="h-3 w-3" /> {s.location}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="rounded-lg border border-emerald-100 p-4">
-            <div className="flex items-center gap-2 text-emerald-700 font-medium mb-3"><DollarSign className="h-4 w-4"/> Financial breakdown</div>
-            <dl className="text-sm">
-              <div className="flex items-center justify-between py-1"><dt className="text-gray-600">Startup costs</dt><dd className="font-medium text-gray-800">{currency(plan.financials.startup)}</dd></div>
-              <div className="flex items-center justify-between py-1"><dt className="text-gray-600">Monthly OPEX</dt><dd className="font-medium text-gray-800">{currency(plan.financials.opex)}</dd></div>
-              <div className="flex items-center justify-between py-1"><dt className="text-gray-600">Monthly revenue (est.)</dt><dd className="font-medium text-gray-800">{currency(plan.financials.revenue)}</dd></div>
-              <div className="flex items-center justify-between py-1 border-t mt-2 pt-2"><dt className="text-gray-600">Projected ROI</dt><dd className="font-semibold text-emerald-700">{plan.roiMonths} months</dd></div>
-            </dl>
+        {/* Finance */}
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
+            <div className="flex items-center gap-2 text-slate-200">
+              <Building2 className="h-4 w-4 text-emerald-400" /> Capital allocation
+            </div>
+            <ul className="mt-2 space-y-1 text-sm text-slate-300">
+              <li>Seeds & broodstock: IDR {currency(plan.finance.seed)}</li>
+              <li>Infrastructure: IDR {currency(plan.finance.infrastructure)}</li>
+              <li>Feed (3-4 months): IDR {currency(plan.finance.feed)}</li>
+              <li>Reserve & contingency: IDR {currency(plan.finance.reserve)}</li>
+            </ul>
           </div>
 
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <div className="flex items-center gap-2 text-amber-800 font-medium mb-3"><AlertTriangle className="h-4 w-4"/> Risk mitigation</div>
-            <ul className="list-disc list-inside space-y-1 text-sm text-amber-900">
-              {plan.risks.map((r, i) => (
-                <li key={i}>{r}</li>
+          <div className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
+            <div className="flex items-center gap-2 text-slate-200">
+              <DollarSign className="h-4 w-4 text-emerald-400" /> Monthly projection
+            </div>
+            <ul className="mt-2 space-y-1 text-sm text-slate-300">
+              <li>Revenue: IDR {currency(plan.finance.monthlyRevenue)}</li>
+              <li>Costs: IDR {currency(plan.finance.monthlyCost)}</li>
+              <li className="font-medium text-white">Profit: IDR {currency(plan.finance.monthlyProfit)}</li>
+              <li className="text-xs text-slate-400">Projected break-even in {plan.finance.roiMonths} months</li>
+            </ul>
+          </div>
+
+          <div className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
+            <div className="flex items-center gap-2 text-slate-200">
+              <ShieldCheck className="h-4 w-4 text-emerald-400" /> Risk mitigation
+            </div>
+            <ul className="mt-2 space-y-1 text-sm text-slate-300">
+              {plan.riskMitigation.map((r, i) => (
+                <li key={i}>• {r}</li>
               ))}
             </ul>
           </div>
